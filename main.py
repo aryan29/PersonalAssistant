@@ -15,8 +15,8 @@ from twilio.rest import Client
 engine = pyttsx3.init()
 engine.say("Welcome sir")
 engine.runAndWait()
-# account_sid = 'AC7504911dbd847700d6f86a438d75a99f'
-# auth_token = '241329502f99b4b9772279fad0b6a807'
+# account_sid = '###########'
+# auth_token = '############'
 # client = Client(account_sid, auth_token)
 #
 # message = client.messages.create(
