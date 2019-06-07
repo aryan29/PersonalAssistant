@@ -3,27 +3,26 @@ import os
 import re
 import pyaudio
 import sys
+import emoji
+import wolframalpha
 import webbrowser
 import requests
 import youtube_dl
 import wikipedia
 import random
+import time
 import pyaudio
+import subprocess
+import vlc
 import pyttsx3
 import datetime
-from os.path import isdir, isfile, exists, basename
-from re import search, IGNORECASE
-from subprocess import Popen, run, PIPE
-from sys import argv
-import argparse
-import logging
-from magic import from_file
+import playsound
 from twilio.rest import Client
-engine = pyttsx3.init()
+engine=pyttsx3.init()
 engine.say("Welcome sir")
 engine.runAndWait()
-# account_sid = '###########'
-# auth_token = '############'
+# account_sid = 'AC7504911dbd847700d6f86a438d75a99f'
+# auth_token = '241329502f99b4b9772279fad0b6a807'
 # client = Client(account_sid, auth_token)
 #
 # message = client.messages.create(
@@ -31,24 +30,14 @@ engine.runAndWait()
 #                               body='Your Yummy Cupcakes Company order of 1 dozen frosted cupcakes has shipped and should be delivered on July 10, 2019. Details: http://www.yummycupcakes.com/',
 #                               to='whatsapp:+917906224093'
 #                           )
+
 # print(message.sid)
-
-filetypes = {
-    r'\.(pdf|epub)$': ['mupdf'],
-    r'\.(txt|tex|md|rst|py|sh)$': ['gvim', '--nofork'],
-    r'\.html$': ['firefox'],
-    r'\.xcf$': ['gimp'],
-    r'\.e?ps$': ['gv'],
-    r'\.(jpe?g|png|gif|tiff?|p[abgp]m|bmp|svg)$': ['gpicview'],
-    r'\.(pax|cpio|zip|jar|ar|xar|rpm|7z)$': ['tar', 'tf'],
-    r'\.(tar\.|t)(z|gz|bz2?|xz)$': ['tar', 'tf'],
-    r'\.(mp4|mkv|avi|flv|mpg|movi?|m4v|webm|vob)$': ['mpv'],
-    r'\.(s3m|xm|mod|mid)$':
-    ['urxvt', '-title', 'Timidity++', '-e', 'timidity', '-in', '-A30a']
-}
-othertypes = {'dir': ['rox'], 'txt': ['gvim', '--nofork']}
-
-
+def wolfram(search):
+    app_id = "53LKA6-QRALH3RGXQ"
+    client = wolframalpha.Client(app_id)
+    res = client.query(search)
+    ans = next(res.results).text
+    return ans
 def myCommand():
     r = sr.Recognizer()
     with sr.Microphone() as source:
@@ -59,100 +48,59 @@ def myCommand():
     try:
         command = r.recognize_google(audio).lower()
         print('You said: ' + command + '\n')
-    # loop back to continue to listen for commands if unrecognizable speech is received
+    #loop back to continue to listen for commands if unrecognizable speech is received
     except sr.UnknownValueError:
         print('....')
-        command = myCommand()
+        command = myCommand();
     return command
-
-
 def response(audio):
     engine.say(audio)
     engine.runAndWait()
-
-
 def assistant(command):
     print("I am here")
     if "open" in command:
-        m = re.search('open(.+)', command)
-        mi = m.group(1)
-        mi = mi[1:]
+        m=re.search('open(.+)',command)
+        mi=m.group(1)
+        mi=mi[1:]
         url = 'https://www.' + mi+'.com'
-        print("Redirecting to", url)
+        print("Redirecting to",url)
         webbrowser.open(url)
         print("done")
         response(mi+" has been opened for you sir")
     elif 'time' in command:
-        now = datetime.datetime.now()
-        response('Current time is %d hours %d minutes' %
-                 (now.hour, now.minute))
-    elif 'file' in command:
-        engine.say('Which file sir')
-        engine.runAndWait()
-        files = myCommand()
-        for nm in files:
-            logging.info(f"trying '{nm}'")
-            if isdir(nm):
-                cmds = othertypes['dir'] + [nm]
-            elif isfile(nm):
-                cmds = matchfile(filetypes, othertypes, nm)
-            else:
-                cmds = None
-
-            if not cmds:
-                logging.warning(f"do not know how to open '{nm}'")
-                continue
-            try:
-                Popen(cmds)
-            except OSError as e:
-                logging.error("Cant open")
-    elif 'app' in command:
-        engine.say('Which app sir')
-        engine.runAndWait()
-        appname = myCommand()
-        Popen("appname")
+        now=datetime.datetime.now()
+        response('Current time is %d hours %d minutes'%(now.hour,now.minute))
+    elif 'song' in command:
+        print("Playing a song")
+        response('Which song sir enter name and duration of play')
+        k=input()
+        x=int(input())
+        for i in os.listdir(os.getcwd()+'/songs'):
+            if k in i:
+                song=vlc.MediaPlayer('songs/'+i)
+                song.play()
+                timeout=time.time()+x
+                print(timeout,time.time())
+                while True:
+                    if time.time()>timeout:
+                        song.stop()
+                        break
+        print("song played")
+    elif 'hello' in command:
+        response(random.choice(list(open('greetings.txt','r'))))
+    elif 'joke' in command:
+        print(random.choice(list(open('jokes.txt','r'))),"\U0001F923","\U0001F923")
+    elif 'photo' in command:
+        os.system('streamer -f jpeg -o photos/pic.jpeg')
+        response('Photo taken')
     else:
-        response(
-            'This function is currently beyond my ability but I will soon learn it')
-
-
-def matchfile(fdict, odict, fname):
-    for k, v in fdict.items():
-        if search(k, fname, IGNORECASE) is not None:
-            return v + [fname]
-    if b'text' in from_file(fname):
-        return odict['txt'] + [fname]
-    return None
-
-
-def locate(args):
-    files = []
-    try:
-        for nm in args:
-            if exists(nm):
-                files.append(nm)
-            else:
-                cp = run(['locate', nm], stdout=PIPE)
-                paths = cp.stdout.decode('utf-8').splitlines()
-                if len(paths) == 1:
-                    files.append(paths[0])
-                elif len(paths) == 0:
-                    logging.warning(f"path '{nm}' not found")
-                else:
-                    basenames = []
-                    for p in paths:
-                        if basename(p) == nm:
-                            basenames.append(p)
-                            logging.info(f'found possible match "{p}"')
-                    if len(basenames) == 1:
-                        files.append(basenames[0])
-                    else:
-                        logging.warning(f"ambiguous path '{nm}' skipped")
-                        for p in basenames:
-                            logging.warning(f"found '{p}'")
-    except FileNotFoundError:
-        files = args
-    return files
+        try:
+            ans=wolfram(command)
+            print(ans)
+            response(ans)
+        except:
+            url=f"https://www.google.com/search?q={command}&source=lnms&sa=X&ved=0"
+            webbrowser.open(url)
 
 
 while True:
