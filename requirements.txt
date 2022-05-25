@@ -5,7 +5,7 @@ chardet==3.0.4
 idna==2.8
 PyAudio==0.2.11
 pycodestyle==2.5.0
-PyJWT==1.7.1
+PyJWT==2.4.0
 PySocks==1.7.0
 python-vlc==3.0.6109
 pyttsx3==2.71
